@@ -8,7 +8,8 @@ This repository is a live research dossier for an active protocol design. The RE
 |---|---|
 | **Status** | Research, pre-spec. No code. No EIP number. |
 | **Origin** | 2026-09-17 hot take: "add zcash style private transfers which are included end of block FOCIL style with some fancy UTXO state and proof aggregation thing that doesn't require all nodes to sync the state." |
-| **Maintainer** | [@dmarzzz](https://github.com/dmarzzz) |
+| **Maintainer** | [@dmarzzz](https://github.com/dmarzzz) · [@DistributedMarz](https://x.com/DistributedMarz) |
+| **Repo** | https://github.com/dmarzzz/eth-shielded-lane |
 | **Last dossier update** | 2026-09-17 |
 | **Target** | Post-Hegotá (2027+). Depends on EIP-7805 (FOCIL) shipping in Hegotá. |
 | **License** | CC BY 4.0 |
