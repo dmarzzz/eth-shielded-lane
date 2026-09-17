@@ -38,6 +38,7 @@ enum LaneOp {
 - `nullifiers` MUST NOT appear in `nullifier_state` (v0: bit unset; v2: not in window) and MUST NOT repeat within the lane. First occurrence wins; later conflicting ops are dropped without invalidating the lane.
 - `fee` is paid from consumed value (ADR-0006). Conservation: `sum(in) == sum(out) + utxo_out.value + fee`, enforced in the proof with `fee` as a public input.
 - `Unshield.utxo_out` is appended to the transparent UTXO openings for block N with index `next_utxo_index++`. No account state is written (ADR-0004).
+- Nullifier reveals happen ONLY in the lane (ADR-0008). The payload MUST NOT spend shielded notes.
 - Deposits are NOT lane operations. A deposit is a payload transaction that pays into the vault with an `ownerCommitment` and is queued.
 
 ## 4. Lane validity (client check)
@@ -96,7 +97,7 @@ Committee members MAY include lane ops in their inclusion lists. Attesters MUST 
 |---|---|---|
 | public -> shielded | payload tx into vault, queued, drained at block end | spendable at N+1 |
 | shielded -> public | lane Unshield emits transparent UTXO | spendable at N+1 via frame tx in payload |
-| shielded -> public, atomic with EVM action | payload-side 8182-style transact (inline mode) | same block; OQ-7 decides if allowed |
+| shielded -> public, atomic with EVM action | not supported; nullifiers are revealed only in the lane (ADR-0008) | n/a |
 
 ## 10. v2 additions (Tachyon path)
 

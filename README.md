@@ -85,6 +85,7 @@ Full draft: [`docs/design/spec-draft.md`](docs/design/spec-draft.md).
 | Primary-source survey (Tachyon, Nero UTXOs, FOCIL, EIP-8182, roadmap, MCP) | done | [`docs/research/`](docs/research/) |
 | Two-lane block structure | drafted | [ADR-0002](docs/decisions/ADR-0002-two-lane-block.md) |
 | Unshield path | decided (transparent UTXO), alternatives recorded | [ADR-0004](docs/decisions/ADR-0004-unshield-via-transparent-utxo.md) |
+| Slot timing / parallel build argument | decided | [ADR-0008](docs/decisions/ADR-0008-nullifiers-only-in-the-lane.md) |
 | Proof system choice | v0 decided (Groth16 BN254), v2 open | [ADR-0005](docs/decisions/ADR-0005-proof-tiers.md), OQ-1 |
 | Lane fee market | sketched | OQ-4 |
 | Aggregator role and incentives | sketched | OQ-3 |
@@ -108,6 +109,7 @@ Each decision has an ADR under [`docs/decisions/`](docs/decisions/) with context
 | [0005](docs/decisions/ADR-0005-proof-tiers.md) | Ship v0 (per-tx Groth16, batch-verified), design for v2 (single aggregate + windowed nullifiers) | Buildable now on existing precompile assumptions; does not wait on Ragu or a new curve |
 | [0006](docs/decisions/ADR-0006-fees-from-shielded-value.md) | Fees paid from shielded value, separate lane gas | Removes every account read from the lane; closes the FOCIL "block full" loophole |
 | [0007](docs/decisions/ADR-0007-focil-enforcement.md) | FOCIL committee lists lane txs; attesters reject a lane missing any listed tx | Reuses the Hegotá mechanism; "valid if appended" is trivial because the lane commutes |
+| [0008](docs/decisions/ADR-0008-nullifiers-only-in-the-lane.md) | Nullifier reveals only in the lane; no inline shielded spends in the payload | Makes the lane's pre-state known at t=0 of the previous slot, so committee and builder work in parallel and attesters check the lane by t=3 |
 
 ## 5. Open questions
 
@@ -121,7 +123,7 @@ Status values: `open`, `researching`, `answered`, `deferred`. An answered questi
 | OQ-4 | Lane fee market. Own base fee like blob gas? Fixed price per tx shape? How does base-fee burn from shielded value work? | open | Spec section + simple simulation |
 | OQ-5 | Deposit queue vs. ordered insert. Draining deposits at block end is simplest; is a one-block delay on deposits acceptable? | open | UX review; compare with Nero's 1-block latency |
 | OQ-6 | Cost model: consensus state, per-block bandwidth for the lane, attester verify time at v0 (batch Groth16) and v2. | open | Spreadsheet with sourced constants |
-| OQ-7 | Inline mode. Should 8182-style transact remain allowed in the payload for atomic unshield-act-reshield, given it reveals nullifiers outside the lane? | open | Decide whether nullifier reveals outside the lane are allowed at all |
+| OQ-7 | Inline mode. Should 8182-style transact remain allowed in the payload for atomic unshield-act-reshield, given it reveals nullifiers outside the lane? | answered | No. [ADR-0008](docs/decisions/ADR-0008-nullifiers-only-in-the-lane.md): nullifiers only in the lane, which is what makes parallel building and t=0..3 attestation work |
 | OQ-8 | PCD custody. Both Nero and Tachyon move data custody to the user. Tachyon answers with oblivious sync services. Who runs those on Ethereum and why? | open | Service model + incentives; wallet-side design |
 | OQ-9 | History expiry (EIP-4444). Old openings and roots must stay provable after block bodies are pruned. Nero's answer is "openings are kept around." Need the sealing invariant CPerezz asked for. | open | Specify batch sealing schedule and retention |
 | OQ-10 | Post-quantum path. EIP-8182 plans a verifier swap. Pierre's post argues hash-based from day one. Does v2's choice foreclose either? | deferred | Track OQ-1 |
