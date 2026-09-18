@@ -60,6 +60,8 @@ consensus state for the shielded system:
 nothing else. no note set, no full nullifier set.
 ```
 
+What the lane committee is, and is not. It is FOCIL's committee: 16 validators chosen fresh each slot. Each one writes down the shielded transactions it has seen and gossips that list, so that no builder or proposer can quietly drop one. It does not anonymize anything. A shielded transfer is already private when it leaves the wallet: a proof, a nullifier, and a commitment, unreadable to everyone including the committee. The committee's job is inclusion, not privacy. Privacy comes from the transaction; censorship resistance comes from the committee.
+
 Why the lane commutes with the payload:
 
 - Lane transactions read only the root ring and the nullifier window. They write only appends.
