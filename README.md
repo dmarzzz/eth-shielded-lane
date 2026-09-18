@@ -10,7 +10,7 @@ This repository is a live research dossier for an active protocol design. The RE
 | **Origin** | 2026-09-17 hot take: "add zcash style private transfers which are included end of block FOCIL style with some fancy UTXO state and proof aggregation thing that doesn't require all nodes to sync the state." |
 | **Maintainer** | [@dmarzzz](https://github.com/dmarzzz) · [@DistributedMarz](https://x.com/DistributedMarz) |
 | **Repo** | https://github.com/dmarzzz/eth-shielded-lane |
-| **Last dossier update** | 2026-09-17 |
+| **Last dossier update** | 2026-09-18 |
 | **Target** | Post-Hegotá (2027+). Depends on EIP-7805 (FOCIL) shipping in Hegotá. |
 | **License** | CC BY 4.0 |
 
@@ -18,13 +18,15 @@ This repository is a live research dossier for an active protocol design. The RE
 
 ## 1. Thesis
 
-MEV is a property of contention, not of transactions. When many actors reach for the same state in the same block, ordering is worth money and a specialist captures it. Builders exist because ordering contentious state is a real skill, and ePBS is Ethereum accepting that. Multiple concurrent proposers fights this head on: split a contentious block across many proposers and the merge into one order becomes the new thing to game, which is where an out-of-protocol backrun market forms. Every published MCP design merges into one execution.
+People trying to access the same state is what creates MEV. That is why builders exist. Ordering contentious state is a real skill with real economies of scale, and ePBS is Ethereum accepting that. With innovations like propAMM prioritization and JIT routing (Quintus's work at Flashbots), the builder's role will keep getting more important for improving a blockchain's ability to facilitate applications like exchanges. Contention is not a bug to be designed away. It is what a market looks like from the inside.
 
-A shielded transfer is the one common workload with no contention. It burns a nullifier only the spender holds, appends a commitment, and moves value inside a vault. Two shielded transfers can only conflict on a double spend. No ordering value, no MEV, no builder needed. So MCP is free here where it is expensive everywhere else.
+On their own, MCP and encrypted mempools are not bullish. They limit the market potential for markets built on top of Ethereum: split a contentious block across many proposers and the merge into one order becomes the new thing to game, which is where an out-of-protocol backrun market forms. Every published MCP design merges into one execution. It is a valid opinion to say let's not care about market efficiency for trading tokens and stocks on Ethereum in favor of decentralization. But then at that point let's give up the complexity and just do private transfers like Zcash.
 
-The design principle that follows, and that every decision in this repo applies ([ADR-0000](docs/decisions/ADR-0000-partition-by-contention.md)): **partition the block by contention.** Contentious state stays with the builders and keeps the market structure. Non-contentious state goes to a committee and keeps censorship resistance. The two lanes never depend on each other's contents. The only places MEV can appear are the crossings, and those are routed through the builder's lane on purpose.
+The core insight: **MCP is amazing for something with low state contention**, because there is less incentive to build out-of-protocol markets to game MCP. A shielded transfer burns a nullifier only the spender holds, appends a commitment, and moves value inside a vault. Two shielded transfers can only conflict on a double spend. No ordering value, no MEV, no builder needed. MCP is free there and expensive everywhere else. And if we are talking low contention activity, then skip all the complexity and just do Zcash.
 
-The bet: scaling an execution environment scales contention and the extraction market with it. Scaling shielded payments scales proof verification and data, both of which aggregate and prune. Private payments are the workload that can grow toward civilization scale without the growth creating a new market to extract from.
+But what if we could do both? Do the regular full block through the builder mev-boost pathway (soon to be ePBS), and then create an end-of-block section for private transfers which cannot interact with the public lane state, and do MCP there. This way the "centralized" block builders focus on the high contention portion for people who are less concerned about getting censored, and the maximally "decentralized" validator network minimizes the chance of censorship for money. That is the design principle every decision in this repo applies ([ADR-0000](docs/decisions/ADR-0000-partition-by-contention.md)): **partition the block by contention.** The two lanes never depend on each other's contents. The only places MEV can appear are the crossings, and those are routed through the builder's lane on purpose.
+
+How the private transfers work internally is the part to be humble about. The Zcash folks are giga cracked and Ethereum has its own proposals in flight (EIP-8182, Nero's native UTXOs, Tachyon's prunable state). This dossier picks a starting point and argues it, but the main design requirement is really this: **can you decouple the private and public state while still being able to transfer between the two.** Everything downstream, the anchor rule, the unshield path, the proof tiers, is a way of satisfying that one requirement.
 
 Ethereum is about to ship the pieces: FOCIL in Hegotá, frame transactions under consideration, EIP-8182 proposed, ePBS in Glamsterdam. Zcash's Tachyon shows how the shielded side prunes and aggregates. This dossier is the composition.
 
@@ -146,6 +148,7 @@ Status values: `open`, `researching`, `answered`, `deferred`. An answered questi
 | OQ-15 | Attester verification budget. "Valid if appended" for a listed-but-omitted lane tx means verifying its proof. Bound: 16 lists × 8 KiB ≈ at most ~128 Groth16 proofs per slot, batch-verified. Needs a measured number and a rule that committee members verify before listing (their lists are signed, so garbage is attributable). | open | Benchmark batch verification on a CL client; specify lister duties |
 | OQ-16 | Lane-specific inclusion list. Lane ops carry proofs (~1 KB each) and do not fit EIP-7805's 8 KiB lists alongside normal txs. Needs a lane list topic and byte budget as an EIP-7805 amendment. | open | Draft the amendment |
 | OQ-14 | Political path. Nero declined ZK on the UTXO chassis; 8182 is already PFI'd with the simpler model. Is this pitched as 8182 v2, a new EIP, or a research post first? | open | Write the ethresear.ch post and see |
+| OQ-17 | Does an end-of-block private lane change builder economics at all (fee flow, bid values, timing games), or is it truly orthogonal? Needs a builder's view. | open | Conversation with an active builder team; model of lane fee flow against payload bid values |
 
 ## 6. Ethereum roadmap dependencies
 
