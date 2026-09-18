@@ -15,7 +15,7 @@ struct ShieldedState {
     commitment_root_ring: bytes32[8192]     // root as of end of block N at N mod 8192
     sealed_batches      : bytes32[]         // one per 8192 blocks; sealing invariant TBD (OQ-9)
     openings_root_ring  : bytes32[8192]     // transparent UTXO openings (Nero)
-    nullifier_state     : v0: bitfield keyed by nullifier index
+    nullifier_state     : v0: set of revealed nullifiers (permanent; same cost as EIP-8182)
                           v2: window of nullifiers for the last W blocks (OQ-2)
     deposit_queue       : Deposit[]         // drained at block end (ADR-0003)
     vault_balance       : uint256 (ETH); per-token for ERC-20 (OQ-11)
@@ -35,7 +35,7 @@ enum LaneOp {
 ```
 
 - `anchor_root` MUST be in `commitment_root_ring` as of the end of block N-1 (ADR-0003).
-- `nullifiers` MUST NOT appear in `nullifier_state` (v0: bit unset; v2: not in window) and MUST NOT repeat within the lane. First occurrence wins; later conflicting ops are dropped without invalidating the lane.
+- `nullifiers` MUST NOT appear in `nullifier_state` (v0: not in set; v2: not in window) and MUST NOT repeat within the lane. A lane containing any such conflict is INVALID. Conflicts are excluded at assembly time, which is possible because the lane's nullifier pre-state is known at t=0 of the previous slot (ADR-0008). Dropping at apply time is not allowed: it would invalidate an aggregate proof and shift leaf indices.
 - `fee` is paid from consumed value (ADR-0006). Conservation: `sum(in) == sum(out) + utxo_out.value + fee`, enforced in the proof with `fee` as a public input.
 - `Unshield.utxo_out` is appended to the transparent UTXO openings for block N with index `next_utxo_index++`. No account state is written (ADR-0004).
 - Nullifier reveals happen ONLY in the lane (ADR-0008). The payload MUST NOT spend shielded notes.
@@ -53,7 +53,11 @@ def lane_valid(state_after_payload, lane) -> bool:
     v0: assert batch_verify_groth16([op.proof for op in lane.ops], public_inputs)
     v1: assert verify(lane.member_aggregates[i]) for each committee member i
     v2: assert verify(lane.aggregate, commit(lane.ops))
-    # nullifier conflicts are checked during application, not here
+    seen = set()
+    for op in lane.ops:
+        for n in op.nullifiers:
+            assert n not in S.nullifier_state and n not in seen
+            seen.add(n)
     return True
 ```
 
@@ -62,14 +66,14 @@ def lane_valid(state_after_payload, lane) -> bool:
 ```
 def apply_lane(S, lane):
     seen = set()
-    for op in lane.ops:
-        if any(n in S.nullifier_state or n in seen for n in op.nullifiers): continue  # drop
-        seen |= set(op.nullifiers)
+    tips = 0
+    for op in lane.ops:                       # lane already validated conflict-free
         mark_spent(S, op.nullifiers)
         for c in op.out_commitments: insert(S, c, S.next_leaf_index++)
         if op is Unshield: append_opening(S, op.utxo_out, S.next_utxo_index++)
-        burn(S.vault, base_fee_lane); credit_tip(lane.proposer, op.fee - base_fee_lane)
+        burn(S.vault, base_fee_lane); tips += op.fee - base_fee_lane
         emit LaneOutput(op.out_note_data)
+    if tips: append_opening(S, {recipient: lane.proposer, value: tips}, S.next_utxo_index++)  # tip as transparent UTXO, no account write
     for d in S.deposit_queue: insert(S, d.commitment, S.next_leaf_index++)   # ADR-0003
     S.deposit_queue = []
     S.commitment_root_ring[N % 8192] = root(S.tree)
@@ -80,11 +84,11 @@ def apply_lane(S, lane):
 ## 6. Beacon block fields
 
 - `shielded_lane_root`: commitment to `lane.ops` (and aggregate where present). Committed by the proposer at t=0 alongside the ePBS bid.
-- `shielded_lane_proposer`: TBD (OQ-3).
+- `shielded_lane_proposer`: v0: none; the lane is the deterministic union of the committee's signed lists, ordered by (member index, list position), and the slot proposer includes its commitment. v1/v2: the aggregator, TBD (OQ-3).
 
 ## 7. Inclusion enforcement (ADR-0007)
 
-Committee members MAY include lane ops in their inclusion lists. Attesters MUST reject a block whose lane omits a committee-listed op that satisfies Section 4 and whose nullifiers were unspent as of end of N-1. Equivocation handling: TBD (OQ-3).
+Committee members MAY include lane ops in a lane-specific inclusion list (OQ-16). A member MUST verify an op before listing it; lists are signed, so an invalid listed op is attributable to its lister. Attesters MUST reject a block whose lane omits a committee-listed op that satisfies Section 4 and whose nullifiers were unspent as of end of N-1. Equivocation handling: TBD (OQ-3).
 
 ## 8. Resource lane (ADR-0006)
 

@@ -57,9 +57,9 @@ nothing else. no note set, no full nullifier set.
 Why the lane commutes with the payload:
 
 - Lane transactions read only the root ring and the nullifier window. They write only appends.
-- Fees are paid from shielded value (EIP-8182 fee note / Nero vault pattern). The lane never reads an EOA balance or nonce.
+- Fees are paid from shielded value (EIP-8182 fee note / Nero vault pattern). Tips are paid out as a transparent UTXO to the lane's proposer, not as an account credit. The lane never reads or writes an EOA.
 - Anchor rule: lane transactions prove against roots as of the end of block N-1. The lane's pre-state is fully known at slot start, so the committee can build and prove it in parallel with the builder, and the proposer commits to both at t=0.
-- Conflicts exist only among lane transactions (same nullifier). First wins. The client checks the window itself, so dropping a conflicting entry needs no re-proof.
+- Conflicts exist only among lane transactions (same nullifier) and against the previous lane, both known at slot start. A lane containing any conflict is invalid; the lane is assembled conflict-free, never repaired at apply time (aggregation and leaf indices both depend on this).
 
 The only coupling is the two crossings:
 
@@ -72,9 +72,9 @@ Proof tiers (ship v0, grow into v2):
 
 | Tier | Proofs verified per block | What it needs | State model |
 |---|---|---|---|
-| v0 | one Groth16 BN254 per tx, batch-verified natively in the lane | nothing new on the proof side | root ring + permanent nullifier bits (Nero spent-bit style, ~0.3 B/tx) |
+| v0 | one Groth16 BN254 per tx, batch-verified natively in the lane | nothing new on the proof side | root ring + a permanent nullifier set (same state cost as EIP-8182; no pruning at v0) |
 | v1 | one per committee member (16) | simple non-recursive aggregation | same |
-| v2 | one aggregate for the whole lane | recursion on a curve with an EVM/CL verifier path | root ring + nullifier **window**; users carry PCD non-membership proofs (Tachyon) |
+| v2 | one aggregate for the whole lane | recursion a CL client can verify inside the attestation window; Tachyon-style nullifier derivation and note format | root ring + nullifier **window**; users carry PCD non-membership proofs (Tachyon). This is a note-format change, not only a state-model swap |
 
 Full draft: [`docs/design/spec-draft.md`](docs/design/spec-draft.md).
 
@@ -94,6 +94,7 @@ Full draft: [`docs/design/spec-draft.md`](docs/design/spec-draft.md).
 | Nullifier window sizing | not started | OQ-2 |
 | Cost model (state, bandwidth, verify time) | not started | OQ-6 |
 | Prototype (lane validity checker over a fork of an EL client) | not started | |
+| Red team (six author personas) | done, 19 objections, 5 fatal-or-serious addressed in spec | [`docs/redteam-2026-09-17.md`](docs/redteam-2026-09-17.md) |
 | ethresear.ch post | not started | framing in Section 8 |
 | EIP draft | not started | blocked on OQ-1, OQ-3 |
 
@@ -120,7 +121,7 @@ Status values: `open`, `researching`, `answered`, `deferred`. An answered questi
 |---|---|---|---|
 | OQ-1 | Which recursive proof system for v2? Tachyon's Ragu is Halo/IPA over Pasta; the EVM only has BN254 pairing precompiles. Candidates: PCD on the bn254/grumpkin cycle with a Groth16 wrap; hash-based recursion (WHIR/STIR) with native client verification; a new precompile. | open | Benchmarks of one aggregate over ~1k txs inside a builder window; Ragu benchmarks when published |
 | OQ-2 | Nullifier window size W. Too small and honest users with stale PCD get rejected; too large and the pruning win shrinks. Nero uses an 8192-block ring for roots. | open | Model of PCD refresh latency vs. W; oblivious-sync service assumptions |
-| OQ-3 | Who aggregates and how are they paid? Slot proposer vs. designated committee member vs. anyone. Equivocation and withholding cases. | researching | Incentive analysis borrowing from FOCIL fee options and the duplication-penalizing TFM in the MCP literature |
+| OQ-3 | Who aggregates (v1/v2 only; at v0 the lane is the deterministic union of committee lists and needs no aggregator) and how are they paid? Equivocation and withholding cases. The t=9..11 window is two seconds; no aggregation benchmark exists. | researching | Incentive analysis borrowing from FOCIL fee options and the duplication-penalizing TFM in the MCP literature |
 | OQ-4 | Lane fee market. Own base fee like blob gas? Fixed price per tx shape? How does base-fee burn from shielded value work? | open | Spec section + simple simulation |
 | OQ-5 | Deposit queue vs. ordered insert. Draining deposits at block end is simplest; is a one-block delay on deposits acceptable? | open | UX review; compare with Nero's 1-block latency |
 | OQ-6 | Cost model: consensus state, per-block bandwidth for the lane, attester verify time at v0 (batch Groth16) and v2. | open | Spreadsheet with sourced constants |
@@ -131,6 +132,8 @@ Status values: `open`, `researching`, `answered`, `deferred`. An answered questi
 | OQ-11 | ERC-20 in the lane. 8182 supports it with a per-note token field; Nero's token proofs were found incomplete on-thread. | deferred | After v0 spec for ETH |
 | OQ-12 | Compliance hooks. 8182 punts to companion standards; Privacy Pools association proofs could ride on the unshield entry. | deferred | Companion doc |
 | OQ-13 | Reorgs. Pre-signed lane txs die if the creation block is re-indexed (Nero thread). Does anchoring to N-1 plus the ring make this tolerable? | open | Analysis |
+| OQ-15 | Attester verification budget. "Valid if appended" for a listed-but-omitted lane tx means verifying its proof. Bound: 16 lists × 8 KiB ≈ at most ~128 Groth16 proofs per slot, batch-verified. Needs a measured number and a rule that committee members verify before listing (their lists are signed, so garbage is attributable). | open | Benchmark batch verification on a CL client; specify lister duties |
+| OQ-16 | Lane-specific inclusion list. Lane ops carry proofs (~1 KB each) and do not fit EIP-7805's 8 KiB lists alongside normal txs. Needs a lane list topic and byte budget as an EIP-7805 amendment. | open | Draft the amendment |
 | OQ-14 | Political path. Nero declined ZK on the UTXO chassis; 8182 is already PFI'd with the simpler model. Is this pitched as 8182 v2, a new EIP, or a research post first? | open | Write the ethresear.ch post and see |
 
 ## 6. Ethereum roadmap dependencies
