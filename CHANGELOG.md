@@ -1,7 +1,7 @@
 # Changelog
 
 ## 2026-09-18
-- Explainer film (Remotion + three.js) built for the thread: v1 build/gossip/commit/reveal/execute; v2 one-block cue and orderly-execution counters; v3 (27.7 s) single glass hull with internal partition, proposer + 512-attester field with quorum counter, PTC vote, six-row swimlane timeline, AgX color pipeline, HDRI-style lighting, DOF/bloom/grain, easing pass, end card. 4K ProRes master rendered.
+- Explainer film (Remotion + three.js) built for the thread: v1 build/gossip/commit/reveal/execute; v2 one-block cue and orderly-execution counters; v3 (27.7 s) single glass hull with internal partition, proposer + 512-attester field with quorum counter, PTC vote, six-row swimlane timeline, AgX color pipeline, HDRI-style lighting, DOF/bloom/grain, easing pass, end card. 4K ProRes master rendered. v4 seal-caption sequencing fix; v5 committee re-staged as list-keepers (per-node list stacks, list replication instead of tx bouncing, sealed-slab tags, combined lane list at t=8) after the owner read the ring as a mixer.
 - Launch-video quality research: 23 reference films measured, craft/pipeline gap analysis, public-company compliance checklist. Synthesis in docs/launch-video-quality.md.
 
 ## 2026-09-17
