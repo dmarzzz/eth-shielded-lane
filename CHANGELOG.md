@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-09-18
+- Explainer film (24 s, Remotion + three.js) built for the thread; one-block cue and orderly-execution beat added.
+- Launch-video quality research: 23 reference films measured, craft/pipeline gap analysis, public-company compliance checklist. Synthesis in docs/launch-video-quality.md.
+
 ## 2026-09-17
 - ADR-0000 (partition by contention) written as the founding decision; README thesis rewritten around it.
 - Red team (docs/redteam-2026-09-17.md). Fixes: v0 nullifier state is a set, not a bitfield; conflicting lanes are invalid rather than repaired; tips paid as transparent UTXOs; v0 lane is the union of committee lists with no aggregator; OQ-15 (attester verification budget) and OQ-16 (lane-specific IL) opened; ADR-0005 v2 wording corrected.

@@ -100,6 +100,7 @@ Full draft: [`docs/design/spec-draft.md`](docs/design/spec-draft.md).
 | Nullifier window sizing | not started | OQ-2 |
 | Cost model (state, bandwidth, verify time) | not started | OQ-6 |
 | Prototype (lane validity checker over a fork of an EL client) | not started | |
+| Launch-video quality research (references, craft, process) | done | [`docs/launch-video-quality.md`](docs/launch-video-quality.md) |
 | Red team (six author personas) | done, 19 objections, 5 fatal-or-serious addressed in spec | [`docs/redteam-2026-09-17.md`](docs/redteam-2026-09-17.md) |
 | ethresear.ch post | not started | framing in Section 8 |
 | EIP draft | not started | blocked on OQ-1, OQ-3 |
@@ -181,6 +182,8 @@ README.md                      this status board
 docs/design/spec-draft.md      draft spec v0.1 (normative language where decided)
 docs/decisions/ADR-*.md        design decisions with alternatives
 docs/research/0*-*.md          primary-source notes, verbatim quotes, dates
+docs/research/video/           launch-video research: references, craft, process
+docs/launch-video-quality.md   synthesis: what launch grade means, our film scored
 docs/bibliography.md           every URL used, grouped
 CHANGELOG.md                   dated dossier changes
 ```
