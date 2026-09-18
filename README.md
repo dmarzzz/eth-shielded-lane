@@ -18,9 +18,15 @@ This repository is a live research dossier for an active protocol design. The RE
 
 ## 1. Thesis
 
-Ethereum is about to ship the two pieces a native shielded pool needs for censorship resistance and gas abstraction (FOCIL in Hegotá, frame transactions under consideration), and it already has a shielded-pool EIP on the table (EIP-8182). What EIP-8182 does not solve, by its author's own account, is unprunable nullifier state and per-transaction proof verification. Zcash's Tachyon project solves exactly those two problems for Zcash: validators keep only a recent nullifier window, users carry a recursive proof that their older nullifiers were never revealed, and block producers aggregate shielded transactions into one proof.
+MEV is a property of contention, not of transactions. When many actors reach for the same state in the same block, ordering is worth money and a specialist captures it. Builders exist because ordering contentious state is a real skill, and ePBS is Ethereum accepting that. Multiple concurrent proposers fights this head on: split a contentious block across many proposers and the merge into one order becomes the new thing to game, which is where an out-of-protocol backrun market forms. Every published MCP design merges into one execution.
 
-The claim of this dossier: those pieces compose into a **second lane in the Ethereum block**. The builder builds the payload as today. A FOCIL-style committee builds a smaller shielded lane that is appended after the payload. The two do not read each other's state. The lane's consensus state is a ring of recent roots plus a nullifier window, so nodes never sync the shielded set. The crossing back to public state goes through a transparent UTXO, so the lane never writes account state at all.
+A shielded transfer is the one common workload with no contention. It burns a nullifier only the spender holds, appends a commitment, and moves value inside a vault. Two shielded transfers can only conflict on a double spend. No ordering value, no MEV, no builder needed. So MCP is free here where it is expensive everywhere else.
+
+The design principle that follows, and that every decision in this repo applies ([ADR-0000](docs/decisions/ADR-0000-partition-by-contention.md)): **partition the block by contention.** Contentious state stays with the builders and keeps the market structure. Non-contentious state goes to a committee and keeps censorship resistance. The two lanes never depend on each other's contents. The only places MEV can appear are the crossings, and those are routed through the builder's lane on purpose.
+
+The bet: scaling an execution environment scales contention and the extraction market with it. Scaling shielded payments scales proof verification and data, both of which aggregate and prune. Private payments are the workload that can grow toward civilization scale without the growth creating a new market to extract from.
+
+Ethereum is about to ship the pieces: FOCIL in Hegotá, frame transactions under consideration, EIP-8182 proposed, ePBS in Glamsterdam. Zcash's Tachyon shows how the shielded side prunes and aggregates. This dossier is the composition.
 
 ## 2. The design in one screen
 
@@ -104,6 +110,7 @@ Each decision has an ADR under [`docs/decisions/`](docs/decisions/) with context
 
 | ADR | Decision | One-line why |
 |---|---|---|
+| [0000](docs/decisions/ADR-0000-partition-by-contention.md) | Partition the block by contention | MEV comes from contention; shielded transfers have none, so they need no builder and MCP is free for them; everything contended stays with builders |
 | [0001](docs/decisions/ADR-0001-base-on-eip-8182.md) | Base pool semantics on EIP-8182 | Only shielded-pool proposal with a fork slot; its author concedes the state-growth gap this design fills |
 | [0002](docs/decisions/ADR-0002-two-lane-block.md) | Two-lane block, not MCP-style merged execution | Every published MCP design merges bundles into one sequential execution, reintroducing state coupling |
 | [0003](docs/decisions/ADR-0003-anchor-at-n-minus-1.md) | Lane anchors to roots as of block N-1 | Makes the lane's pre-state known at slot start; enables parallel building under ePBS |
