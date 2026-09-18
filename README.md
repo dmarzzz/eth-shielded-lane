@@ -100,6 +100,7 @@ Full draft: [`docs/design/spec-draft.md`](docs/design/spec-draft.md).
 | Nullifier window sizing | not started | OQ-2 |
 | Cost model (state, bandwidth, verify time) | not started | OQ-6 |
 | Prototype (lane validity checker over a fork of an EL client) | not started | |
+| Explainer film (27.7 s, three.js in Remotion) | v3 built; source `~/dmarz/animation_exp/src/compositions/ShieldedLaneFilm.tsx` | not in repo (binary); see CHANGELOG |
 | Launch-video quality research (references, craft, process) | done | [`docs/launch-video-quality.md`](docs/launch-video-quality.md) |
 | Red team (six author personas) | done, 19 objections, 5 fatal-or-serious addressed in spec | [`docs/redteam-2026-09-17.md`](docs/redteam-2026-09-17.md) |
 | ethresear.ch post | not started | framing in Section 8 |

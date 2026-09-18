@@ -1,7 +1,7 @@
 # Changelog
 
 ## 2026-09-18
-- Explainer film (24 s, Remotion + three.js) built for the thread; one-block cue and orderly-execution beat added.
+- Explainer film (Remotion + three.js) built for the thread: v1 build/gossip/commit/reveal/execute; v2 one-block cue and orderly-execution counters; v3 (27.7 s) single glass hull with internal partition, proposer + 512-attester field with quorum counter, PTC vote, six-row swimlane timeline, AgX color pipeline, HDRI-style lighting, DOF/bloom/grain, easing pass, end card. 4K ProRes master rendered.
 - Launch-video quality research: 23 reference films measured, craft/pipeline gap analysis, public-company compliance checklist. Synthesis in docs/launch-video-quality.md.
 
 ## 2026-09-17
