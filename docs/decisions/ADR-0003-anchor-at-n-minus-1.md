@@ -1,6 +1,6 @@
 # ADR-0003: Lane anchors to roots as of block N-1; deposits drain at block end
 
-- Status: accepted
+- Status: superseded in part by ADR-0009 (the deposit queue and block-end drain are removed; deposits get their own tree)
 - Date: 2026-09-17
 - Deciders: dmarzzz
 

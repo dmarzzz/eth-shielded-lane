@@ -1,6 +1,6 @@
 # ADR-0001: Base pool semantics on EIP-8182
 
-- Status: accepted
+- Status: accepted; note 2026-09-19: EIP-8182 was declined for Hegotá on 2026-09-14 (EIP-8081), so "the only shielded-pool proposal with a fork slot" no longer holds. The note model is still the base; the circuit now diverges by one selector per input and a second anchor (ADR-0009)
 - Date: 2026-09-17
 - Deciders: dmarzzz
 

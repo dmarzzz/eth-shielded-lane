@@ -1,6 +1,6 @@
 # ADR-0008: Nullifier reveals happen only in the lane, so the lane and the payload are built in parallel
 
-- Status: accepted
+- Status: accepted; the withholding claim is made true by ADR-0011, and the deposit wording is replaced by ADR-0009
 - Date: 2026-09-17
 - Deciders: dmarzzz
 - Resolves: OQ-7

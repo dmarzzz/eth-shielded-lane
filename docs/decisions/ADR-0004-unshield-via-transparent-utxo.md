@@ -1,6 +1,6 @@
 # ADR-0004: Unshield into a transparent UTXO, not an account credit
 
-- Status: accepted
+- Status: superseded by ADR-0009 (unshield is a system credit from a lane-written outbox; alternative 2 below, with a turnstile)
 - Date: 2026-09-17
 - Deciders: dmarzzz
 

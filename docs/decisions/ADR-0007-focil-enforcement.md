@@ -1,6 +1,6 @@
 # ADR-0007: FOCIL committee lists lane transactions; attesters reject a lane missing any listed transaction
 
-- Status: accepted
+- Status: accepted; amended by ADR-0010: inclusion is checked by op hash only, a listed op is never excused, and an invalid listed op applies as a no-op. "Valid if appended" is no longer evaluated by attesters
 - Date: 2026-09-17
 - Deciders: dmarzzz
 

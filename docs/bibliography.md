@@ -15,6 +15,7 @@ All URLs used in the dossier, grouped. Reviewed 2026-09-17.
 - ZK Podcast 388, Sean Bowe on Tachyon: https://zeroknowledge.fm/podcast/388/
 
 ## Native UTXOs / frames
+- vbuterin, Hyper-scaling state by creating new forms of state (2026-02-05): https://ethresear.ch/t/hyper-scaling-state-by-creating-new-forms-of-state/24052
 - Nero_eth, Native UTXOs on Ethereum (2026-07-06): https://ethresear.ch/t/native-utxos-on-ethereum/25368
 - EIP-8141 Frame transactions: https://eips.ethereum.org/EIPS/eip-8141
 - EIP-8250 Keyed nonces: https://eips.ethereum.org/EIPS/eip-8250

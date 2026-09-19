@@ -29,6 +29,7 @@ These are positions, not settled facts. Each one could be argued the other way, 
 
 - Builders are valuable and should keep the contentious lane. Ordering contention is a skill worth paying for, and the roadmap should sharpen it rather than route around it.
 - MCP and encrypted mempools over contentious state are a net negative for markets on Ethereum. They push the specialist out of protocol and cap the market potential of what gets built on top.
+- The two lanes carry opposite kinds of orderflow. Contended transactions have value before inclusion, so they are public in content and sent privately to builders. Shielded ops have no value to anyone before inclusion, so they are private in content and can be gossiped in the open to a committee. What the open gossip still exposes is network origin, which the lane topic has to handle (OQ-19).
 - The design requirement that decides everything is state decoupling with a transfer path between the two states. Any proposal that cannot decouple private from public state, while still letting value cross, fails here no matter how good its cryptography is.
 
 ## The bet

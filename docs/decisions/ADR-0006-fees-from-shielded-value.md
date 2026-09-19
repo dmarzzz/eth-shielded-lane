@@ -1,6 +1,6 @@
 # ADR-0006: Fees paid from shielded value; separate lane gas budget
 
-- Status: accepted
+- Status: accepted; amended by ADR-0009: base-fee burn and tips are settled by the payload side when it pays the outbox, the lane never writes a balance
 - Date: 2026-09-17
 - Deciders: dmarzzz
 

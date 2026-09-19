@@ -1,6 +1,6 @@
 # ADR-0005: Ship v0 with per-tx Groth16 batch-verified; design for a single aggregate with windowed nullifiers
 
-- Status: accepted
+- Status: accepted; amended by ADR-0010 and ADR-0011: v0 proofs are verified per op after attesting (batch first, fall back to per-op on failure), and a failed proof makes that op a no-op rather than the lane invalid
 - Date: 2026-09-17
 - Deciders: dmarzzz
 
