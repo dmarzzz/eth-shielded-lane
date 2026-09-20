@@ -37,6 +37,7 @@
 import React, { useLayoutEffect, useMemo, useRef } from 'react';
 import { useCurrentFrame, useVideoConfig } from 'remotion';
 import { DmarzMark } from './DmarzMark';
+import { EndCard } from './EndCard';
 import { ThreeCanvas } from '@remotion/three';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -44,7 +45,7 @@ import { RoundedBox, MeshReflectorMaterial } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette, DepthOfField, ToneMapping, Noise } from '@react-three/postprocessing';
 import { BlendFunction, ToneMappingMode, DepthOfFieldEffect } from 'postprocessing';
 
-const MONO = "ui-monospace, 'SF Mono', Menlo, monospace";
+import { MONO, DISPLAY } from './Fonts';
 type V3 = [number, number, number];
 
 // ---------------------------------------------------------------------------
@@ -136,7 +137,11 @@ const fgA = (a: number) => `rgba(232,234,237,${a})`;
 // Beats (frames)
 // ---------------------------------------------------------------------------
 const SLOT_FRAMES = 720; // two slots on the timeline
-const DUR = 830;
+const LEAD = 54; // frames of breathing room before transactions start to arrive
+const LEAD_A = 8, LEAD_W = Math.ceil(LEAD * 1.5); // ease window; 1.5x keeps film time from running backwards
+// raw composition frame -> film frame. Labels come up, time slows to a stop, then the slot clock runs.
+const filmFrame = (raw: number) => raw - LEAD * smooth((raw - LEAD_A) / LEAD_W);
+const DUR = 950 + LEAD; // the end card holds for ~5.5 s so the QR can be scanned
 const F = {
   broadcast: 240,
   freeze: 270,
@@ -175,12 +180,12 @@ const PTC_N = 32;
 const CONFIRM_A = F.commit + 2;
 const CONFIRM_B = F.commit + 28;
 // step 2, the attestations: the outer faces fill with green as the counter climbs to quorum
-const SECURE_PEAK = 0.60; // face opacity at the quorum: clearly opaque, interiors still faintly visible
-const SECURE_REST = 0.27; // resting confirmed look, open enough for the payload reveal to read through
+const SECURE_PEAK = 0.26; // no overshoot: the light state rises with the attestations and holds
+const SECURE_REST = 0.26; // state 1, light green: proposed and attested, contents still read through
 // step 3, the seal: the walls go dense green and the block moves on. The outline already says
 // "block", so the seal is carried by the faces, not by a brighter edge.
-const SECURE_SEALED = 0.9; // wall opacity once the last op is in and the root is committed
-const SEAL_CAP = 0.32; // top and bottom take a fraction of the wall alpha, so the hull stays readable from above
+const SECURE_SEALED = 0.86; // state 2, confirmed green: sealed, contents veiled, the block moves on
+const SEAL_CAP = 0.7; // top and bottom take a fraction of the wall alpha, so the hull stays readable from above
 const WIPE_SPAN = 2.2; // arc-units a dropped vertical takes to fill
 
 // ---------------------------------------------------------------------------
@@ -1180,9 +1185,10 @@ const makeSecureSkinMat = () => {
 const SecureSkin: React.FC<{ position: V3; opacity: number; boost: number; seal?: number }> = ({ position, opacity, boost, seal = 0 }) => {
   const mat = useMemo(makeSecureSkinMat, []);
   mat.opacity = opacity;
-  mat.color.set('#1d8f68').lerp(tmpColor.set(CONF), 0.28 * boost).lerp(tmpColor.set('#0d6f4e'), 0.45 * seal);
-  // the sealed slab is denser, not brighter: the emissive lift comes back down as the walls fill
-  mat.emissive.set(CONF).multiplyScalar((0.09 + 0.5 * boost) * lerp(1, 0.5, seal));
+  // light state: pale mint. confirmed state: saturated emerald. Emission carries the colour,
+  // otherwise a lit dark-green pane only darkens what is behind it.
+  mat.color.set('#a9efcf').lerp(tmpColor.set('#12b877'), seal);
+  mat.emissive.set('#8fe6bd').lerp(tmpColor.set('#0fae6e'), seal).multiplyScalar(lerp(0.3, 0.62, seal) + 0.35 * boost);
   (mat.userData.uSideBias as { value: number }).value = seal;
   return (
     <RoundedBox args={HULL_SIZE} radius={0.03} smoothness={4} position={position} material={mat} renderOrder={3.5} visible={opacity > 0.004} />
@@ -1238,7 +1244,7 @@ const Hull: React.FC<{
     .set('#1a2647')
     .lerp(tmpColor.set('#12503c'), 0.5 * tint)
     .lerp(tmpColor.set('#136a4a'), 0.8 * secure * clamp01(0.45 + 0.55 * securePulse + 0.55 * (secureFace / SECURE_REST)))
-    .lerp(tmpColor.set('#0e5f44'), 0.5 * sealFace)
+    .lerp(tmpColor.set('#0f8f5c'), 0.7 * sealFace)
     .multiplyScalar(lerp(0.7, 1, focus) * (1 + 0.5 * securePulse));
   const specMat = useMemo(makeSpecMat, []);
   specMat.envMapIntensity = 0.38 * solid * dim;
@@ -1367,9 +1373,11 @@ const PayloadFill: React.FC<{ film: Film }> = ({ film }) => {
 
   const { items, arrival, origin, entry, shrink, lift, spin, settled, flight, queue, spec, ticks } = data;
   const f = film.frame;
-  const desat = lerp(lerp(0.88, 0, film.reveal), 0.9, film.dolly);
-  const brightness = lerp(lerp(0.42, 1, film.reveal) + film.revealOver, 0.4, film.dolly);
-  const alpha = lerp(lerp(0.72, 1, film.reveal), 0.55, film.dolly);
+  // at the seal the contents settle into the confirmed look, so the green reads as the block's state
+  const done = Math.max(film.dolly, film.sealFace);
+  const desat = lerp(lerp(0.88, 0, film.reveal), 0.9, done);
+  const brightness = lerp(lerp(0.42, 1, film.reveal) + film.revealOver, 0.34, done);
+  const alpha = lerp(lerp(0.72, 1, film.reveal), 0.5, done);
   const su = (settled.material as THREE.ShaderMaterial).uniforms;
   su.uDesat.value = desat;
   su.uBrightness.value = brightness;
@@ -1384,7 +1392,7 @@ const PayloadFill: React.FC<{ film: Film }> = ({ film }) => {
   qu.uBrightness.value = brightness * 1.18;
   qu.uAlpha.value = Math.min(1, alpha * 1.1);
   (spec.material as THREE.MeshPhysicalMaterial).envMapIntensity = lerp(0.18, 0.55, film.reveal) * (1 - 0.7 * film.dolly);
-  (ticks.material as THREE.MeshBasicMaterial).opacity = 0.95 * (1 - film.dolly);
+  (ticks.material as THREE.MeshBasicMaterial).opacity = 0.95 * (1 - Math.max(film.dolly, film.sealFace));
 
   const execX = film.execX;
   const passedMul = 1 + 0.25 * (1 - film.dolly);
@@ -1628,10 +1636,10 @@ const LaneFill: React.FC<{ film: Film; sched: ReturnType<typeof buildShieldSched
     return { settled, flight, ticks };
   }, [items]);
   const { settled, flight, ticks } = meshes;
-  (ticks.material as THREE.MeshBasicMaterial).opacity = 0.95 * (1 - film.dolly);
+  (ticks.material as THREE.MeshBasicMaterial).opacity = 0.95 * (1 - Math.max(film.dolly, film.sealFace));
   const f = film.frame;
   const su = (settled.material as THREE.ShaderMaterial).uniforms;
-  su.uBrightness.value = 0.42 * lerp(1, 0.55, film.dolly) * (1 + 1.2 * film.attest) * (1 + 1.5 * film.aggFlash);
+  su.uBrightness.value = 0.42 * lerp(1, 0.55, Math.max(film.dolly, film.sealFace)) * (1 + 1.2 * film.attest) * (1 + 1.5 * film.aggFlash);
 
   for (let i = 0; i < items.length; i++) {
     const a = arrival[i];
@@ -2375,7 +2383,7 @@ const TICKS: { x: number; label: string; align: 'left' | 'center' | 'right' }[] 
   { x: xN1(12), label: 't=12', align: 'center' },
 ];
 
-const Mono: React.FC<{ x: number; y: number; align?: 'left' | 'center' | 'right'; color?: string; opacity?: number; weight?: number; size?: number; children: React.ReactNode }> = ({
+const Mono: React.FC<{ x: number; y: number; align?: 'left' | 'center' | 'right'; color?: string; opacity?: number; weight?: number; size?: number; display?: boolean; children: React.ReactNode }> = ({
   x,
   y,
   align = 'left',
@@ -2383,6 +2391,7 @@ const Mono: React.FC<{ x: number; y: number; align?: 'left' | 'center' | 'right'
   opacity = 1,
   weight = 400,
   size = 24,
+  display = false,
   children,
 }) => (
   <div
@@ -2391,7 +2400,8 @@ const Mono: React.FC<{ x: number; y: number; align?: 'left' | 'center' | 'right'
       left: x,
       top: y,
       transform: align === 'center' ? 'translateX(-50%)' : align === 'right' ? 'translateX(-100%)' : 'none',
-      fontFamily: MONO,
+      fontFamily: display ? DISPLAY : MONO,
+      textShadow: display ? `0 0 18px ${color}` : undefined,
       fontSize: size,
       lineHeight: `${size + 4}px`,
       color,
@@ -2459,7 +2469,7 @@ const Timeline: React.FC<{ frame: number; alpha: number }> = ({ frame, alpha }) 
         const right = xAt(e.at) > 1440;
         const x = xAt(e.at) + (right ? -10 : 10);
         return (
-          <Mono key={i} x={x} y={TL.evY + (1 - a) * 6} align={right ? 'right' : 'left'} color={e.color} weight={600} size={28} opacity={a}>
+          <Mono key={i} x={x} y={TL.evY + (1 - a) * 6} align={right ? 'right' : 'left'} color={e.color} weight={900} size={32} display opacity={a}>
             {e.text}
           </Mono>
         );
@@ -2486,7 +2496,7 @@ const Timeline: React.FC<{ frame: number; alpha: number }> = ({ frame, alpha }) 
 
 // ---------------------------------------------------------------------------
 export const SL_Film: React.FC = () => {
-  const frame = useCurrentFrame();
+  const frame = filmFrame(useCurrentFrame());
   const { width, height } = useVideoConfig();
   const film = useMemo(() => filmAt(frame), [frame]);
   const sched = useMemo(buildShieldSchedule, []);
@@ -2606,31 +2616,11 @@ export const SL_Film: React.FC = () => {
 
       <Timeline frame={frame} alpha={film.tlA} />
 
-      <DmarzMark right={44} top={26} scale={0.8} opacity={0.8 * (1 - film.endFade)} />
+      <DmarzMark right={44} top={28} scale={0.64} opacity={1 - film.endFade} cycleOffset={14.3} />
 
       {/* tail: fade to the end card */}
       <div style={{ position: 'absolute', inset: 0, background: VOID, opacity: film.endFade, pointerEvents: 'none' }} />
-      {film.cardA > 0.002 && (
-        <div
-          style={{
-            position: 'absolute',
-            left: '50%',
-            top: '50%',
-            transform: `translate(-50%, -50%) translateY(${((1 - film.cardA) * 8).toFixed(2)}px)`,
-            fontFamily: MONO,
-            fontSize: 30,
-            lineHeight: '40px',
-            letterSpacing: '0.02em',
-            color: FG,
-            opacity: film.cardA,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          <span style={{ fontWeight: 600 }}>eth-shielded-lane</span>
-          <span style={{ opacity: 0.55 }}> · </span>
-          <span style={{ opacity: 0.8 }}>github.com/dmarzzz/eth-shielded-lane</span>
-        </div>
-      )}
+      {film.cardA > 0.002 && <EndCard a={film.cardA} cycleOffset={6.3} />}
     </div>
   );
 };

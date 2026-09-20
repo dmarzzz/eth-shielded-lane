@@ -1,6 +1,7 @@
 # Changelog
 
 ## 2026-09-19
+- Media redone in its final look: plain figure titles, no chrome, nesting in data structures drawn as boxes, calmer glow, the author's logo. The explainer film now shows three block states (filling, proposed and attested, sealed), gives the viewer a breath before transactions arrive, and ends on a card with a QR code to this repository. Sources for everything are in `media/src/`.
 - Second red team, two reports: `docs/redteam-2026-09-19-crossings.md` (the separation property and both crossings) and `docs/redteam-2026-09-19-consensus-alternatives.md` (fork choice, incentives, attester load, alternatives table, staged path).
 - ADR-0009: one writer per structure. Deposits get their own payload-written tree, read by lanes two blocks late; the deposit queue and block-end drain are removed. Unshields become system credits paid from a lane-written outbox at the start of the next full payload (EIP-4895 pattern, vault as turnstile); the transparent-UTXO unshield and its claim transaction are removed. Supersedes parts of ADR-0003 and ADR-0004.
 - ADR-0010: validity is per op and a lane cannot be invalid. Fixes the attack where one user sends conflicting ops to two listers and no valid block exists. Inclusion is checked by hash; listers are partitioned with redundancy `r` (OQ-18 opened).

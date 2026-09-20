@@ -1,5 +1,7 @@
 import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from "remotion";
 import { DmarzMark } from "./DmarzMark";
+import { Field, Swarm, Bloom, Overlay, glass, IrisEdge, Brackets, emit, Title, HudChrome, useBloomPass } from "./Juice";
+import { MONO } from "./Fonts";
 
 /**
  * Shielded lane thread — the two crossings, animated.
@@ -13,7 +15,6 @@ import { DmarzMark } from "./DmarzMark";
 
 const BG = "#070a0e";
 const FG = "#e8eaed";
-const MONO = "ui-monospace, 'SF Mono', Menlo, monospace";
 const SANS = "Inter, system-ui, -apple-system, sans-serif";
 
 const BL = "#7aa2f7";
@@ -43,7 +44,7 @@ type Leg = { step: number; label: string; color: string; from: Anchor; to: Ancho
 type Send = { step: number; label: string; route: "public" | "lane"; to: { card: number; row: string } };
 type StepDef = { caption: string; sub?: string; rows: string[]; cells: string[] };
 type Link = { step: number; from: Anchor; to: Anchor; color: string };
-type FlowDef = { title: string; cards: [CardDef, CardDef]; stateLabel: string; cells: CellDef[]; steps: StepDef[]; legs: Leg[]; links: Link[]; sends: Send[] };
+type FlowDef = { title: string; cards: [CardDef, CardDef]; stateLabel: string; cells: CellDef[]; steps: StepDef[]; legs: Leg[]; links: Link[]; sends: Send[]; fig: string };
 
 // ---------------------------------------------------------------------------
 // Layout (absolute, so the moving token always knows where things are)
@@ -66,7 +67,7 @@ const SEND_T0 = 4; // a send leaves the wallet
 const SEND_MID = 22; // reaches the mempool / committee
 const SEND_T1 = 40; // lands in its row
 const AFTER_SEND = 74; // state reacts once the tx is in the block
-const USER: [number, number] = [1010, 80];
+const USER: [number, number] = [1130, 84];
 const GATE_Y = CARD_TOP - 24;
 export const FLOW_FRAMES = 5 * STEP_LEN + TAIL;
 
@@ -84,7 +85,7 @@ const ramp = (f: number, a: number, b: number) => interpolate(f, [a, b], [0, 1],
 const Segs: React.FC<{ segs: Seg[] }> = ({ segs }) => (
   <span style={{ whiteSpace: "pre" }}>
     {segs.map((g, i) => (
-      <span key={i} style={{ color: g.c ?? FG, fontWeight: g.b ? 700 : 400 }}>
+      <span key={i} style={{ color: g.c ?? FG, fontWeight: g.b ? 700 : 400, textShadow: emit(g.c, g.b ? 1.1 : 0.75) }}>
         {g.t}
       </span>
     ))}
@@ -92,6 +93,7 @@ const Segs: React.FC<{ segs: Seg[] }> = ({ segs }) => (
 );
 
 const Card: React.FC<{ def: CardDef; x: number; active: Set<string>; seen: Set<string>; started: boolean; frame: number }> = ({ def, x, active, seen, started, frame }) => {
+  const bloomPass = useBloomPass();
   const h = HEAD_H + PAD_Y * 2 + def.rows.length * ROW_H;
   return (
     <div
@@ -101,18 +103,41 @@ const Card: React.FC<{ def: CardDef; x: number; active: Set<string>; seen: Set<s
         top: CARD_TOP,
         width: CARD_W,
         height: h,
-        background: "rgba(255,255,255,0.022)",
-        border: `1px solid ${wA(0.1)}`,
         borderRadius: 16,
-        overflow: "hidden",
         fontFamily: MONO,
+        ...glass(SL, bloomPass),
       }}
     >
+      <IrisEdge radius={16} />
+      <Brackets color="#8fa2d8" inset={-9} size={16} opacity={0.6} />
       <div style={{ height: HEAD_H, display: "flex", alignItems: "center", padding: "0 26px", borderBottom: `1px solid ${wA(0.07)}`, fontSize: 28 }}>
         <span style={{ color: "#c792ea" }}>block </span>
         <span style={{ fontWeight: 700, marginLeft: 12 }}>{def.title}</span>
       </div>
-      <div style={{ paddingTop: PAD_Y }}>
+      {/* nesting: payload, shielded_lane and block-end ops are siblings inside the block */}
+      {def.rows.map((r, ri) => {
+        if (r.kind !== "section") return null;
+        let e = ri + 1;
+        while (e < def.rows.length && def.rows[e].kind !== "section") e++;
+        const hue = r.accent === OK ? "#8a93a6" : r.accent ?? SL;
+        return (
+          <div
+            key={`box-${r.id}`}
+            style={{
+              position: "absolute",
+              left: 9,
+              right: 9,
+              top: HEAD_H + PAD_Y + ri * ROW_H + 3,
+              height: (e - ri) * ROW_H - 6,
+              borderRadius: 9,
+              border: `1px solid ${hexA(hue, 0.5)}`,
+              borderLeft: `3px solid ${hexA(hue, 0.9)}`,
+              background: hexA(hue, 0.055),
+            }}
+          />
+        );
+      })}
+      <div style={{ paddingTop: PAD_Y, position: "relative" }}>
         {def.rows.map((r) => {
           const landAt = r.sentAt === undefined ? -1 : r.sentAt * STEP_LEN + SEND_T1;
           const landed = r.sentAt === undefined ? 1 : ramp(frame, landAt - 4, landAt + 8);
@@ -127,10 +152,14 @@ const Card: React.FC<{ def: CardDef; x: number; active: Set<string>; seen: Set<s
                 height: ROW_H,
                 display: "flex",
                 alignItems: "center",
-                padding: "0 26px 0 23px",
+                margin: "0 12px",
+                padding: "0 14px 0 11px",
+                borderRadius: 6,
                 borderLeft: `3px solid ${on ? accent : "transparent"}`,
-                background: on ? hexA(accent, 0.13) : "transparent",
+                background: on ? hexA(accent, 0.16) : "transparent",
                 opacity: (on ? 1 : was ? Math.max(base, 0.78) : base) * (0.13 + 0.87 * landed),
+                transform: r.sentAt !== undefined && frame >= landAt - 2 && frame < landAt + 7 ? `translateX(${[3, -4, 2, -2, 5, -3, 1, -1, 0][frame - landAt + 2] ?? 0}px)` : undefined,
+                filter: r.sentAt !== undefined && frame >= landAt - 2 && frame < landAt + 7 ? "drop-shadow(-3px 0 rgba(0,229,255,0.8)) drop-shadow(3px 0 rgba(255,64,128,0.7))" : on ? `drop-shadow(0 0 10px ${hexA(accent, 0.35)})` : undefined,
                 fontSize: r.kind === "section" ? 24 : 23,
               }}
             >
@@ -145,6 +174,7 @@ const Card: React.FC<{ def: CardDef; x: number; active: Set<string>; seen: Set<s
 };
 
 const Cell: React.FC<{ def: CellDef; x: number; w: number; frame: number; active: boolean }> = ({ def, x, w, frame, active }) => {
+  const bloomPass = useBloomPass();
   // the shown value is the last one whose step has landed
   let idx = 0;
   let changedAt = -1e9;
@@ -166,8 +196,10 @@ const Cell: React.FC<{ def: CellDef; x: number; w: number; frame: number; active
         height: CELL_H,
         boxSizing: "border-box",
         borderRadius: 14,
-        border: `1px solid ${active ? hexA(def.accent, 0.75) : wA(0.1)}`,
-        background: active ? hexA(def.accent, 0.08 + 0.1 * flash) : "rgba(255,255,255,0.022)",
+        border: `1px solid ${active ? hexA(def.accent, 0.8) : wA(0.13)}`,
+        background: bloomPass ? (active ? hexA(def.accent, 0.3 * flash) : "transparent") : active ? `linear-gradient(${hexA(def.accent, 0.12 + 0.18 * flash)}, ${hexA(def.accent, 0.12 + 0.18 * flash)}), rgba(5,7,16,0.66)` : "linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02)), rgba(5,7,16,0.66)",
+        ...(bloomPass ? {} : { backdropFilter: "blur(14px) saturate(150%)" }),
+        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 ${18 + 40 * flash}px ${hexA(def.accent, active ? 0.1 + 0.28 * flash : 0)}`,
         padding: "16px 22px",
         fontFamily: MONO,
       }}
@@ -210,7 +242,11 @@ const Flow: React.FC<{ def: FlowDef }> = ({ def }) => {
 
   return (
     <AbsoluteFill style={{ background: BG, fontFamily: SANS, color: FG }}>
-      <div style={{ position: "absolute", top: 44, left: MARGIN, fontSize: 54, fontWeight: 600, letterSpacing: -1.4 }}>{def.title}</div>
+      <Field />
+      <Bloom strength={0.5}>
+      <div style={{ position: "absolute", top: 50, left: MARGIN }}>
+        <Title size={48}>{def.title}</Title>
+      </div>
 
       {def.cards.map((c, i) => (
         <Card key={i} def={c} x={cardX(i)} active={active} seen={seen} started={frame > 6} frame={frame} />
@@ -220,6 +256,14 @@ const Flow: React.FC<{ def: FlowDef }> = ({ def }) => {
       {def.cells.map((c, i) => (
         <Cell key={c.id} def={c} x={cellX(i, n)} w={cellW(n)} frame={frame} active={activeCells.has(c.id)} />
       ))}
+
+      {/* a step change is announced by one analysis sweep down the two blocks */}
+      {(() => {
+        const p = ramp(local, 0, 18);
+        if (step === 0 || p >= 1) return null;
+        const y = CARD_TOP + p * (HEAD_H + PAD_Y * 2 + 10 * ROW_H);
+        return <div style={{ position: "absolute", left: MARGIN, right: MARGIN, top: y, height: 2, background: "linear-gradient(90deg, transparent, #4df3ff 15%, #4df3ff 85%, transparent)", opacity: 0.55 * (1 - p), boxShadow: "0 0 10px #4df3ff, 0 0 30px rgba(77,243,255,0.3)" }} />;
+      })()}
 
       {/* links: a thin elbow from a piece of state up to the row that uses it */}
       <svg width={W} height={1080} style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
@@ -236,7 +280,7 @@ const Flow: React.FC<{ def: FlowDef }> = ({ def }) => {
           const xEnd = cardX(card) + 2;
           const d = `M ${x0} ${yTop} L ${x0} ${yRun} L ${gx} ${yRun} L ${gx} ${y1} L ${xEnd} ${y1}`;
           const len = Math.abs(yTop - yRun) + Math.abs(x0 - gx) + Math.abs(yRun - y1) + Math.abs(xEnd - gx);
-          return <path key={i} d={d} fill="none" stroke={l.color} strokeWidth={2.5} strokeDasharray={len} strokeDashoffset={len * (1 - p)} opacity={0.9} />;
+          return <path key={i} d={d} fill="none" stroke={l.color} strokeWidth={2.5} strokeDasharray={len} strokeDashoffset={len * (1 - p)} opacity={0.95} style={{ filter: `drop-shadow(0 0 8px ${l.color})` }} />;
         })}
       </svg>
 
@@ -277,8 +321,13 @@ const Flow: React.FC<{ def: FlowDef }> = ({ def }) => {
         const p1 = ramp(frame, f0 + SEND_T0, f0 + SEND_MID);
         const p2 = ramp(frame, f0 + SEND_MID, f0 + SEND_T1);
         const way: [number, number] = [gate[0], CARD_TOP + HEAD_H / 2];
-        const x = p2 > 0 ? way[0] + (rx - 120 - way[0]) * p2 : USER[0] + (way[0] - USER[0]) * p1;
-        const y = p2 > 0 ? way[1] + (ry - way[1]) * p2 : USER[1] + (way[1] - USER[1]) * p1;
+        const posAt = (fr: number): [number, number] => {
+          const q1 = ramp(fr, f0 + SEND_T0, f0 + SEND_MID);
+          const q2 = ramp(fr, f0 + SEND_MID, f0 + SEND_T1);
+          return q2 > 0 ? [way[0] + (rx - 120 - way[0]) * q2, way[1] + (ry - way[1]) * q2] : [USER[0] + (way[0] - USER[0]) * q1, USER[1] + (way[1] - USER[1]) * q1];
+        };
+        const [x, y] = posAt(frame);
+        const trail = [2, 4, 6, 8, 10].map((d) => posAt(frame - d));
         return (
           <div key={i}>
             <div
@@ -300,6 +349,9 @@ const Flow: React.FC<{ def: FlowDef }> = ({ def }) => {
             >
               {sd.route === "public" ? "public tx, sent privately → builder" : "private op, gossiped publicly → committee (16)"}
             </div>
+            {trail.map(([tx, ty], k) => (
+              <div key={k} style={{ position: "absolute", left: tx, top: ty, width: 86 - k * 12, height: 10 - k, transform: "translate(-50%, -50%)", borderRadius: 999, background: color, opacity: a * (0.34 - k * 0.06), filter: "blur(5px)" }} />
+            ))}
             <div
               style={{
                 position: "absolute",
@@ -315,7 +367,7 @@ const Flow: React.FC<{ def: FlowDef }> = ({ def }) => {
                 borderRadius: 999,
                 padding: "7px 18px",
                 whiteSpace: "pre",
-                boxShadow: `0 0 34px ${hexA(color, 0.55)}`,
+                boxShadow: `0 0 10px ${hexA(color, 0.65)}, 0 0 28px ${hexA(color, 0.3)}`,
               }}
             >
               {sd.label}
@@ -350,7 +402,7 @@ const Flow: React.FC<{ def: FlowDef }> = ({ def }) => {
               borderRadius: 999,
               padding: "7px 18px",
               whiteSpace: "pre",
-              boxShadow: `0 0 34px ${hexA(leg.color, 0.55)}`,
+              boxShadow: `0 0 10px ${hexA(leg.color, 0.65)}, 0 0 28px ${hexA(leg.color, 0.3)}`,
             }}
           >
             {leg.label}
@@ -358,7 +410,8 @@ const Flow: React.FC<{ def: FlowDef }> = ({ def }) => {
         );
       })}
 
-      <DmarzMark right={76} bottom={8} scale={0.8} />
+      </Bloom>
+      <DmarzMark right={80} bottom={10} scale={0.64} />
 
       {/* one caption at a time */}
       <div style={{ position: "absolute", left: MARGIN, right: MARGIN, top: 944, fontFamily: MONO, opacity: capIn * capOut }}>
@@ -368,6 +421,7 @@ const Flow: React.FC<{ def: FlowDef }> = ({ def }) => {
         </div>
         {cur.sub ? <div style={{ marginTop: 12, marginLeft: 62, fontSize: 23, color: NOTE, fontStyle: "italic" }}>{cur.sub}</div> : null}
       </div>
+      <Overlay />
     </AbsoluteFill>
   );
 };
@@ -376,7 +430,8 @@ const Flow: React.FC<{ def: FlowDef }> = ({ def }) => {
 // Flow 1 — deposit: public → shielded   (ADR-0009: the deposit tree has one writer, the payload)
 // ---------------------------------------------------------------------------
 const DEPOSIT: FlowDef = {
-  title: "deposit: public → shielded",
+  title: "deposit",
+  fig: "film 02/03",
   stateLabel: "one writer per structure",
   cards: [
     {
@@ -417,9 +472,9 @@ const DEPOSIT: FlowDef = {
     { id: "vault", name: "vault ETH", tag: "writer: payload", accent: BL, values: [{ step: -1, segs: [s("1,204 ETH", FG)] }, { step: 0, at: AFTER_SEND, segs: [s("1,209 ETH", BL, true), s("  +5", OK)] }] },
   ],
   steps: [
-    { caption: "you send a normal public tx. the builder includes it: 5 ETH to the vault, c₀ into the deposit tree", rows: ["dep", "depw"], cells: ["dtree", "vault"] },
-    { caption: "one writer each: the payload owns the deposit tree, the lane owns the notes tree. no queue, no drain", rows: ["sealL", "sealD"], cells: ["dtree", "ntree"] },
-    { caption: "deposit_root[N] is sealed. lanes only read deposit roots two blocks old, so a withheld payload can't confuse them", rows: ["sealD", "preN2"], cells: ["dring"] },
+    { caption: "you send a normal public tx. the builder includes it: 5 ETH to the vault, c₀ to the deposit tree", rows: ["dep", "depw"], cells: ["dtree", "vault"] },
+    { caption: "one writer each: the payload owns the deposit tree, the lane owns the notes tree. no queue", rows: ["sealL", "sealD"], cells: ["dtree", "ntree"] },
+    { caption: "deposit_root[N] is sealed. lanes read it two blocks late, so a withheld payload can't confuse them", rows: ["sealD", "preN2"], cells: ["dring"] },
     { caption: "block N+2: you send a lane op to the committee. it proves c₀ is under deposit_root[N]", rows: ["spend", "spend2"], cells: ["dring"] },
     { caption: "its outputs go into the notes tree. from here on the builder never touches your money", rows: ["sealLM"], cells: ["ntree"] },
   ],
@@ -439,7 +494,8 @@ const DEPOSIT: FlowDef = {
 // Flow 2 — unshield: shielded → public   (ADR-0009: the outbox has one writer, the lane)
 // ---------------------------------------------------------------------------
 const UNSHIELD: FlowDef = {
-  title: "unshield: shielded → public",
+  title: "unshield",
+  fig: "film 03/03",
   stateLabel: "one writer per structure",
   cards: [
     {
@@ -488,9 +544,9 @@ const UNSHIELD: FlowDef = {
   steps: [
     { caption: "you send an unshield op to the committee. it rides in the lane, where nullifiers are revealed", rows: ["un1", "un2"], cells: [] },
     { caption: "applied: notes burned, change re-shielded, and a credit (0xA1c…, 5 ETH) pushed to the outbox", rows: ["un1", "un2", "un3"], cells: ["nulls", "tree", "outbox"] },
-    { caption: "no account touched. the lane is the outbox's only writer, the payload only reads it a block later", rows: ["un3", "sealN"], cells: ["outbox", "acct"] },
+    { caption: "no account touched. the lane alone writes the outbox, the payload reads it a block later", rows: ["un3", "sealN"], cells: ["outbox", "acct"] },
     { caption: "block N+1: the payload must start by paying the outbox, the way validator withdrawals are paid", rows: ["pay", "credit", "debit"], cells: ["outbox", "acct"] },
-    { caption: "you sent nothing the second time. there is no tx for a builder to censor, and skipping it voids the payload", rows: ["pay", "credit"], cells: ["acct"] },
+    { caption: "you sent nothing the second time. no tx for a builder to censor, and skipping it voids the payload", rows: ["pay", "credit"], cells: ["acct"] },
   ],
   legs: [
     { step: 1, label: "(0xA1c…, 5 ETH)", color: VA, from: { card: 0, row: "un3" }, to: { cell: "outbox" } },

@@ -91,14 +91,16 @@ Full draft: [`docs/design/spec-draft.md`](docs/design/spec-draft.md).
 
 | | |
 |---|---|
-| ![two lanes, one block](media/figures/SL-Block.png) | ![one writer per structure](media/figures/SL-Writers.png) |
-| The block as a struct | The separation rule |
-| ![unshield](media/figures/SL-Unshield.png) | ![focil enforcement](media/figures/SL-Focil.png) |
-| Unshield, op to credit | Inclusion by hash, validity per op |
-| ![state](media/figures/SL-State.png) | ![timing](media/figures/SL-Timing.png) |
-| What a node keeps | Built in parallel, committed together |
+| ![block structure](media/figures/SL-Block.png) | ![state writers](media/figures/SL-Writers.png) |
+| Block structure: the payload and the shielded lane are siblings inside one block | State writers: one writer per structure |
+| ![unshield](media/figures/SL-Unshield.png) | ![lane inclusion](media/figures/SL-Focil.png) |
+| Unshield, from op to system credit | Lane inclusion: checked by hash, validity per op |
+| ![shielded state](media/figures/SL-State.png) | ![slot timeline](media/figures/SL-Timing.png) |
+| Shielded state: what a node keeps | Slot timeline: built in parallel, committed together |
 
-Films: [explainer (27.7 s)](media/films/SL-Film.mp4) · [deposit, public to shielded](media/films/SL-DepositFlow.mp4) · [unshield, shielded to public](media/films/SL-UnshieldFlow.mp4)
+Films: [explainer (33.5 s)](media/films/SL-Film.mp4) · [deposit](media/films/SL-DepositFlow.mp4) · [unshield](media/films/SL-UnshieldFlow.mp4)
+
+In the explainer a block has three looks: clear glass while it fills, light green once it is proposed and attested, solid green once it is sealed.
 
 ## 3. Status board
 

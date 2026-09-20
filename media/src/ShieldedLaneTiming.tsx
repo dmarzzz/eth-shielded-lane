@@ -6,6 +6,8 @@ import {
   interpolate,
 } from "remotion";
 import { DmarzMark } from "./DmarzMark";
+import { Field, Swarm, Bloom, Overlay, Title, HudChrome, glass, IrisEdge, Brackets } from "./Juice";
+import { MONO } from "./Fonts";
 
 /**
  * Shielded lane thread — slot-timing figure (v2, swimlane).
@@ -26,7 +28,6 @@ import { DmarzMark } from "./DmarzMark";
 
 const BG = "#070a0e";
 const FG = "#e8eaed";
-const MONO = "ui-monospace, 'SF Mono', Menlo, monospace";
 const SANS = "Inter, system-ui, -apple-system, sans-serif";
 
 const BL = "#7aa2f7"; // payload / builder
@@ -149,7 +150,8 @@ const Mono: React.FC<{
         color,
         fontWeight: weight,
         whiteSpace: "pre",
-        background: bg ? BG : "transparent",
+        background: bg ? "rgba(4,6,11,0.78)" : "transparent",
+        borderRadius: 6,
         padding: bg ? "0 8px" : 0,
         marginLeft: bg && align === "left" ? -8 : 0,
         marginRight: bg && align === "right" ? -8 : 0,
@@ -189,9 +191,16 @@ export const SL_Timing: React.FC = () => {
 
   return (
     <AbsoluteFill style={{ background: BG, color: FG, fontFamily: SANS }}>
+      <Field />
+      {/* calm glass under the chart so the swarm never crosses a label */}
+      <div style={{ position: "absolute", left: 70, right: 56, top: 184, height: 664, borderRadius: 18, ...glass("#7aa2f7") }}>
+        <IrisEdge />
+        <Brackets color="#7aa2f7" />
+      </div>
       {/* title */}
-      <div style={{ position: "absolute", top: TITLE_Y, left: LABEL_X, right: 100, ...title, fontSize: 64, fontWeight: 600, letterSpacing: -1.5, lineHeight: 1.15 }}>
-        built in parallel, committed together
+      <Bloom strength={0.4}>
+      <div style={{ position: "absolute", top: TITLE_Y - 6, left: LABEL_X, right: 100, ...title }}>
+        <Title size={68}>{"slot timeline"}</Title>
       </div>
 
       {/* diagram */}
@@ -223,7 +232,7 @@ export const SL_Timing: React.FC = () => {
 
           {/* bars */}
           {BARS.map((b, i) => (
-            <rect key={i} x={b.from} y={barTop(b.row)} width={b.to - b.from} height={BAR_H} fill={b.color} rx={6} />
+            <rect key={i} x={b.from} y={barTop(b.row)} width={b.to - b.from} height={BAR_H} fill={b.color} rx={6} style={{ filter: `drop-shadow(0 0 5px ${b.color}73)` }} />
           ))}
 
           {/* builder: reveal tick at N+1 t=6 (bright, taller than the bar) */}
@@ -238,7 +247,7 @@ export const SL_Timing: React.FC = () => {
 
           {/* diamonds */}
           <Diamond x={bidX} y={bidY} r={15} fill={BL_HI} />
-          <Diamond x={propX} y={propY} r={21} fill={FG} stroke={BG} />
+          <g style={{ filter: "drop-shadow(0 0 6px rgba(255,255,255,0.45))" }}><Diamond x={propX} y={propY} r={21} fill={FG} stroke={BG} /></g>
 
           {/* axis */}
           <line x1={X0 - 2} y1={AXIS_Y} x2={TIP - 22} y2={AXIS_Y} stroke={FG} strokeWidth={2.5} />
@@ -317,7 +326,9 @@ export const SL_Timing: React.FC = () => {
       <div style={{ position: "absolute", bottom: 56, left: LABEL_X, right: 100, transform: foot.transform, opacity: foot.opacity * 0.88, fontFamily: MONO, fontSize: 28, color: FG }}>
         timings from EIP-7732 ePBS and EIP-7805 FOCIL. purple is the new part.
       </div>
-      <DmarzMark right={96} bottom={42} />
+      </Bloom>
+      <DmarzMark right={100} bottom={40} scale={0.8} still />
+      <Overlay />
     </AbsoluteFill>
   );
 };
